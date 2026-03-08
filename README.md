@@ -1,2 +1,2 @@
 # Flashback
-Flashback is an flashcard system for your precious memory
+A flashcard system for your precious memory
