@@ -1,0 +1,21 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# SQLite database files (runtime data, not source)
+*.db
+*.db-wal
+*.db-shm
+
+# Environment variables
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Xcode build artifacts
+ios/FlashbackWidget/build/
+ios/FlashbackWidget/*.xcodeproj/xcuserdata/
+ios/FlashbackWidget/*.xcworkspace/
+DerivedData/

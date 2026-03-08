@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
+    </dict>
+    <!-- IMPORTANT: Set FLASHBACK_API_URL to your deployed backend URL using HTTPS in production,
+         e.g. https://flashback.example.com. The default below is for local development only. -->
+    <key>FLASHBACK_API_URL</key>
+    <string>http://localhost:3000</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <!-- NSAllowsLocalNetworking permits HTTP to localhost for development.
+             Remove this entire dict when deploying to production and use an HTTPS backend URL. -->
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+</dict>
+</plist>
