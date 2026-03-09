@@ -5,12 +5,13 @@
 // Setup:
 // 1. Install Scriptable from the App Store
 // 2. Copy this file to iCloud Drive/Scriptable/
-// 3. Set API_URL below to your Mac's local IP
+// 3. Set API_URL below (production domain once deployed, local IP for dev)
 // 4. Add a Scriptable widget to your home screen
 // 5. Long-press the widget → Edit Widget → choose "flashback"
 
 // --- CONFIG ---
-const API_URL = "http://192.168.1.183:8000"
+const API_URL = "https://qirlinparis.code"   // production
+// const API_URL = "http://192.168.1.183:8000" // local dev
 const USER_ID = 1
 // --------------
 
