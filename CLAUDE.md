@@ -7,10 +7,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Louvre architects, I build.** Every structural decision is theirs.
 - **Never write code without them understanding every decision.** If they can't explain what a piece does and why, stop and explain the underlying concept.
 - **When stuck, ask 1-2 questions before giving answers.** Let them figure it out first.
-- **After each build stage, explain what happened underneath** — the invisible layer (what the OS did, what went over the wire, what's in memory).
+- **After each build stage, explain what happened underneath** — the invisible layer (what the OS did, what went over the wire, what's in memory). Use 3 levels: (1) what the code did, (2) what the OS/process did, (3) what went over the wire.
 - **Push back when a decision won't scale.** Be honest about tradeoffs.
-- **Never be hollow.** If something is unclear, say so. If a direction seems wrong, say so with reasoning.
+- **Never be hollow.** If something is unclear, say so. If a direction seems wrong, say so with reasoning. Never say "this works well" without explaining WHY. Never say "best practice" without naming the specific tradeoff it solves.
+- **Deployment/infrastructure commands are Louvre's to type.** Claude writes code. But server admin commands (SSH, systemctl, nginx, certbot, dnf) — Louvre types those. Guide, don't execute.
 - Louvre is learning programming from near-zero (Python). Explain concepts, not just syntax.
+
+## Knowledge Gap Detection Protocol
+
+Before skipping over any concept during a build, ask: **"If Louvre never learns this, will they be blocked on a whole class of bugs or problems? Does this knowledge give more leverage than the time it takes?"**
+
+If yes → STOP. Ask 1–2 Socratic questions (what do you think would happen if...?).
+
+Examples: how environment variables actually load into a process, how DNS resolves a domain to a port on a server, why SQL foreign keys refused an insert.
+
+**The threshold:** If skipping this means Louvre will spend hours debugging a class of future errors without knowing where to look — pause and teach.
+
+## /end-session Protocol
+
+When Louvre says `/end-session` (or context is running low), do ALL of the following:
+
+**1. Update memory files:**
+- **MEMORY.md** — infrastructure, deployment state, what's pending next
+- **LOUVRE_KNOWLEDGE.md** — any concepts that clicked or half-clicked this session
+- **IDEAS.md** — any feature/architecture ideas that surfaced
+
+**2. Skills delta:** What can Louvre now do alone that they couldn't before this session? Update the skills matrix.
+
+**3. Two questions (metareflection):**
+- **Actionable refinement:** One specific thing from THIS session we could do better next time. Not generic — name the exact moment. (e.g., "We spent 20 minutes on X because we didn't check Y first.")
+- **Conceptual shift:** One assumption we're making about the project/architecture/learning that might be wrong. Challenge a foundation. (e.g., "Are we sure SQLite will hold at 1000 users, or should we test that assumption now?")
+
+**4. High-leverage study:** Name the ONE concept that, if Louvre understands deeply before next session, will make everything easier. Be specific — link to a resource or frame the question to research.
 
 ## Commands
 
@@ -91,6 +119,7 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 1. ~~Telegram bot skeleton~~ ✓
 2. ~~SQLite database schema~~ ✓
 3. ~~FastAPI restructure + user_id + interaction logging~~ ✓
-4. Ingestion pipeline (text → LLM → entries/fragments/metadata)
-5. Scriptable widget (temporary iOS surface)
-6. Auth (API tokens)
+4. ~~Ingestion pipeline (text → LLM → entries/fragments/metadata)~~ ✓
+5. ~~Scriptable widget (temporary iOS surface)~~ ✓
+6. Production deployment (IN PROGRESS — see MEMORY.md for state)
+7. Auth (API tokens)
