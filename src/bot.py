@@ -2,6 +2,8 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from src.config import TELEGRAM_BOT_TOKEN
+from src.database import init_db, get_or_create_user
+from src.ingestion import ingest
 
 WHAT_IT_CAN_DO = (
     "flashback — what it can do right now:\n\n"
@@ -28,20 +30,28 @@ async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Called every time the user sends a text message.
-    For now: just acknowledges receipt.
-    Next step: pass text to ingestion pipeline.
+    Receive text → LLM processes → entries/fragments stored.
     """
+    telegram_id = update.effective_user.id
+    user = get_or_create_user(telegram_id)
     text = update.message.text
-    await update.message.reply_text("received.")
+
+    stored = ingest(user_id=user["id"], text=text)
+    entry_count = len(stored)
+    fragment_count = sum(len(s["fragment_ids"]) for s in stored)
+
+    await update.message.reply_text(
+        f"received. {entry_count} {'entry' if entry_count == 1 else 'entries'}, "
+        f"{fragment_count} {'fragment' if fragment_count == 1 else 'fragments'}."
+    )
 
 
 async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Called for non-text messages (photos, voice, etc.)."""
     await update.message.reply_text("send text only for now.")
 
 
 def main():
+    init_db()
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", handle_start))
@@ -49,7 +59,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(~filters.TEXT, handle_unknown))
 
-    print("flashback is running.")
+    print("flashback bot is running.")
     app.run_polling()
 
 
