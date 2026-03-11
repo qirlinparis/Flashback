@@ -1,15 +1,24 @@
 # Flashback
 
-A flashcard system for your precious memory.
+A spaced repetition system for your own thinking.
 
-Not Anki for facts — a retrieval layer for your own thinking. Journal entries, half-formed ideas, reflections, things you noticed. These aren't facts to memorize. They're seeds that need to resurface when your mind is ready to do something new with them.
+Not Anki for facts — a retrieval layer for your personal archive. Journal entries, half-formed ideas, reflections, things you noticed. These resurface at the right time, when your mind is ready to do something new with them.
 
 ## Status
 
-Early development. See `docs/PROJECT_STATE.md` for full design decisions and `CLAUDE.md` for architecture.
+In production at https://qirlinparis.codes
 
 ## Stack
 
-- Python + python-telegram-bot
-- SQLite
-- Claude API (ingestion processing)
+- Python + FastAPI (REST API, port 8000)
+- python-telegram-bot (Telegram client)
+- SQLite (flashback.db)
+- OpenRouter API (Claude Sonnet — ingestion processing)
+- nginx + certbot (reverse proxy + SSL)
+- Deployed on DigitalOcean (root@104.236.27.211)
+
+## Architecture
+
+API-first. The Telegram bot is one client. iOS app is the next. All logic lives in FastAPI.
+
+See `docs/PROJECT_STATE.md` for full design decisions and `CLAUDE.md` for architecture and working agreements.

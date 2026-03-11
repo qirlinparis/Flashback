@@ -1,17 +1,17 @@
 # Production Deployment Guide
 
 Server: root@104.236.27.211 (My-memory, Fedora 43)
-Domain: qirlinparis.code (Name.com)
+Domain: qirlinparis.codes (Name.com)
 App: /opt/flashback/
 
-## Current state
+## Current state (as of March 11, 2026 — fully deployed)
 - [x] Repo cloned, .env created, pip install done
 - [x] API confirmed starts with `python3 -m src.api`
-- [ ] systemd service
-- [ ] nginx reverse proxy
-- [ ] SSL certificate (certbot)
-- [ ] DNS A record
-- [ ] Widget URL updated
+- [x] systemd service
+- [x] nginx reverse proxy
+- [x] SSL certificate (certbot)
+- [x] DNS A record
+- [x] Widget URL updated
 
 ---
 
@@ -55,7 +55,7 @@ At this point: http://104.236.27.211 should return your API (not HTTPS yet, no d
 ```bash
 # On the server
 dnf install -y certbot python3-certbot-nginx
-certbot --nginx -d qirlinparis.code
+certbot --nginx -d qirlinparis.codes
 ```
 
 certbot will:
@@ -75,10 +75,10 @@ Do this at Name.com DNS management:
 |------|------|-------|-----|
 | A | @ | 104.236.27.211 | 300 |
 
-`@` means the root domain (qirlinparis.code itself, not www.).
+`@` means the root domain (qirlinparis.codes itself, not www.).
 TTL 300 = 5 minutes before the record propagates globally.
 
-After adding: wait ~5 minutes, then run `ping qirlinparis.code` from your local machine — you should see replies from 104.236.27.211.
+After adding: wait ~5 minutes, then run `ping qirlinparis.codes` from your local machine — you should see replies from 104.236.27.211.
 
 Then go back and run Step 3.
 
@@ -95,7 +95,7 @@ const API_URL = "http://192.168.x.x:8000"  // old local IP
 to:
 
 ```js
-const API_URL = "https://qirlinparis.code"
+const API_URL = "https://qirlinparis.codes"
 ```
 
 Then redeploy the widget to your iPhone.
@@ -106,11 +106,11 @@ Then redeploy the widget to your iPhone.
 
 ```bash
 # From your local machine
-curl https://qirlinparis.code/health
+curl https://qirlinparis.codes/health
 # Should return: {"status": "ok"}
 
 # Register your Telegram user
-curl -X POST https://qirlinparis.code/register \
+curl -X POST https://qirlinparis.codes/register \
   -H "Content-Type: application/json" \
   -d '{"telegram_id": YOUR_TELEGRAM_ID}'
 ```

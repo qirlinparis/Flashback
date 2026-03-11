@@ -68,14 +68,14 @@ src/
   config.py    — loads .env (tokens, API host/port)
   database.py  — SQLite schema, all data access, scheduling logic
   api.py       — FastAPI app (ingest, surface, action, reflect endpoints)
-  bot.py       — Telegram bot (polling) — calls database directly for now
+  bot.py       — Telegram bot (polling) — calls ingestion.py directly (known issue: should call /ingest API)
 ```
 
 ### Data flow
 ```
 Client (bot / iOS app / widget)
   → FastAPI backend (api.py)
-    → Ingestion: text → [future: LLM splits entries] → store
+    → Ingestion: text → LLM splits entries → fragments → metadata → store
     → Surfacing: get_due_fragments() → serve to client
     → Actions: keep/let_go/not_now → log interaction → update review state
 ```
@@ -98,15 +98,16 @@ users (multi-user from day one)
 - All interactions logged for future algorithm discovery.
 
 ### API endpoints
-- `POST /ingest` — store text (single entry+fragment for now, LLM splitting next)
+- `POST /ingest` — text → LLM pipeline → entries/fragments/metadata stored
 - `GET /surface/{user_id}` — get today's due fragments
 - `POST /action` — record keep/not_now/let_go + log interaction
 - `POST /reflect` — add reflection to entry
 - `GET /health` — alive check
+- `POST /register` — get or create user by telegram_id
 
 ### LLM integration
 - OpenRouter (not direct Anthropic API). Key: `OPENROUTER_API_KEY`.
-- Used at ingestion: entry splitting, fragment ID, metadata generation. Not built yet.
+- Used at ingestion: entry splitting, fragment ID, metadata generation. Built and running in src/ingestion.py.
 
 ## Product context
 
@@ -121,7 +122,7 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 3. ~~FastAPI restructure + user_id + interaction logging~~ ✓
 4. ~~Ingestion pipeline (text → LLM → entries/fragments/metadata)~~ ✓
 5. ~~Scriptable widget (temporary iOS surface)~~ ✓
-6. Production deployment (IN PROGRESS — see MEMORY.md for state)
+6. ~~Production deployment~~ ✓ (live at qirlinparis.codes)
 7. Auth (API tokens)
 
 ## Agent Maintenance Protocol
