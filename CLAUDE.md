@@ -123,3 +123,21 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 5. ~~Scriptable widget (temporary iOS surface)~~ ✓
 6. Production deployment (IN PROGRESS — see MEMORY.md for state)
 7. Auth (API tokens)
+
+## Agent Maintenance Protocol
+
+Flashback has 16 specialized Claude Code agents in ~/.claude/agents/ on the local machine (not the server). Each agent has a description field that determines when it gets used, and a Flashback Project Context block with project-specific knowledge.
+
+**When to update agents:** Any session that makes a structural change must update affected agent descriptions:
+- New FastAPI endpoint -> update api-designer.md
+- Schema change -> update sql-pro.md
+- LLM pipeline built -> update llm-architect.md and prompt-engineer.md
+- New client (iOS) -> update swift-expert.md and api-designer.md
+- Auth built -> update security-auditor.md
+
+**How:** Use the agent-installer agent — it knows how to update stale descriptions.
+
+**Cross-session memory lives in:** ~/.claude/projects/-Users-elle/memory/
+- MEMORY.md — loads every session automatically
+- cross-session.md — protocol for what persists and how
+- agents.md — full agent map and update rules
