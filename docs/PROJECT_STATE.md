@@ -1,5 +1,5 @@
 # Flashback — Project State
-### Last updated: March 9, 2026 (1 AM session)
+### Last updated: March 12, 2026
 
 ---
 
@@ -151,15 +151,56 @@ Louvre directs architecture, Claude builds. Every decision about what the system
 
 ---
 
-## Open Questions for Next Session
+## Current System State (March 12, 2026)
+
+### What is fully built and live
+- FastAPI backend (port 8000, production at qirlinparis.codes)
+- SQLite database with full schema (users, entries, fragments, review_states, reflections, interaction_logs)
+- Ingestion pipeline: text → LLM (OpenRouter/Claude) → entries/fragments/metadata → stored
+- Surfacing: GET /surface/{user_id} returns due fragments
+- Actions: POST /action records keep/not_now/let_go and updates scheduling
+- Reflections: POST /reflect
+- **API token auth** (March 12): every endpoint requires `Authorization: Bearer <token>`. Tokens are SHA-256 hashed before storage. Ownership checks on /action and /reflect prevent cross-user access.
+- Telegram bot (polling, calls ingestion directly — known issue: should route through /ingest API)
+- Scriptable widget (iOS, polling /surface)
+
+### Build priorities status
+1. ~~Telegram bot skeleton~~ ✓
+2. ~~SQLite database schema~~ ✓
+3. ~~FastAPI restructure + user_id + interaction logging~~ ✓
+4. ~~Ingestion pipeline (text → LLM → entries/fragments/metadata)~~ ✓
+5. ~~Scriptable widget (temporary iOS surface)~~ ✓
+6. ~~Production deployment~~ ✓ (live at qirlinparis.codes)
+7. ~~Auth (API tokens)~~ ✓
+8. **Next: native iOS app** — the real client
+
+---
+
+## Plan for Next Session: Full System Review
+
+Before building the iOS app, walk through the entire system end to end. The goal is not to find bugs to fix — it's to understand what we actually have.
+
+### Review checklist
+1. **Read every source file** (`src/config.py`, `src/database.py`, `src/api.py`, `src/bot.py`, `src/ingestion.py`) — for each: what does it do, what does it touch, what could break?
+2. **Trace a full request lifecycle** — from a Telegram message arriving to a fragment being stored and scheduled
+3. **Trace a surfacing lifecycle** — from GET /surface to a widget showing a card to the user tapping "Keep this"
+4. **Auth flow review** — register → token → authenticated request → ownership check
+5. **Known issue: bot calls ingestion directly** — assess whether to fix now or defer to post-iOS
+6. **Schema review** — are all the fields we're storing actually used? Any missing?
+7. **Scheduling logic** — is the SM-2 / personal mode logic behaving as designed?
+
+### Why before iOS
+The iOS app will consume every endpoint. If something is wrong in the API contract now, it's 10x harder to fix once the app is built around it.
+
+---
+
+## Open Questions (deferred)
 
 1. Widget text: full first sentence + trailing second sentence? Or something else?
 2. Dimmed text opacity — find the right level
-3. How much AI processing at paste time? (entry splitting + fragment ID + tags — what else?)
-4. Exact gesture/interaction mapping refinement
-5. Queue size for deep session — fixed or dynamic?
-6. Cold start: import existing Apple Notes archive early? Or build capture flow first?
-7. How should the "high-value only" notification trigger work? What makes something high-value?
+3. Queue size for deep session — fixed or dynamic?
+4. Cold start: import existing Apple Notes archive early? Or build capture flow first?
+5. How should the "high-value only" notification trigger work?
 
 ---
 

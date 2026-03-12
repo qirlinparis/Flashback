@@ -123,7 +123,9 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 4. ~~Ingestion pipeline (text → LLM → entries/fragments/metadata)~~ ✓
 5. ~~Scriptable widget (temporary iOS surface)~~ ✓
 6. ~~Production deployment~~ ✓ (live at qirlinparis.codes)
-7. Auth (API tokens)
+7. ~~Auth (API tokens)~~ ✓
+8. **Full system review** (next session) — read every file, trace full lifecycle, verify API contract before iOS
+9. Native iOS app
 
 ## Agent Maintenance Protocol
 
@@ -134,7 +136,7 @@ Flashback has 16 specialized Claude Code agents in ~/.claude/agents/ on the loca
 - Schema change -> update sql-pro.md
 - LLM pipeline built -> update llm-architect.md and prompt-engineer.md
 - New client (iOS) -> update swift-expert.md and api-designer.md
-- Auth built -> update security-auditor.md
+- Auth built -> update security-auditor.md ← **needs update** (auth built March 12)
 
 **How:** Use the agent-installer agent — it knows how to update stale descriptions.
 
