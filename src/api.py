@@ -1,15 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
 
 from src.database import (
-    init_db, get_or_create_user, get_entry, get_reflections_for_entry,
-    get_due_fragments, update_review_state, save_reflection,
-    log_interaction,
+    init_db, register_user, get_user_by_token, fragment_belongs_to_user,
+    get_entry, get_reflections_for_entry, get_due_fragments,
+    update_review_state, save_reflection, log_interaction,
 )
 from src.ingestion import ingest as run_ingestion
 
 app = FastAPI(title="Flashback", version="0.1.0")
+
+bearer_scheme = HTTPBearer()
 
 
 @app.on_event("startup")
@@ -17,22 +20,30 @@ def startup():
     init_db()
 
 
-# --- Request/Response models ---
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)):
+    """Validates the Bearer token and returns the user row. Raises 401 if invalid."""
+    user = get_user_by_token(credentials.credentials)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="invalid or missing token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+# --- Request models ---
 
 class IngestRequest(BaseModel):
-    user_id: int
     text: str
     source_type: str = "telegram"
-    original_date: Optional[str] = None
 
 class ActionRequest(BaseModel):
-    user_id: int
     fragment_id: int
     action: str  # 'keep' | 'not_now' | 'let_go'
     time_spent_ms: Optional[int] = None
 
 class ReflectionRequest(BaseModel):
-    user_id: int
     entry_id: int
     text: str
 
@@ -40,29 +51,26 @@ class ReflectionRequest(BaseModel):
 # --- Routes ---
 
 @app.post("/register")
-def register(telegram_id: int = 0):
-    """Get or create a user. Returns user_id for use in other endpoints."""
-    user = get_or_create_user(telegram_id)
-    return {"user_id": user["id"]}
+def register(telegram_id: int):
+    """Register or re-register a user. Returns user_id and a fresh API token."""
+    user, raw_token = register_user(telegram_id)
+    return {"user_id": user["id"], "token": raw_token}
 
 
 @app.post("/ingest")
-def ingest(req: IngestRequest):
+def ingest(req: IngestRequest, current_user=Depends(get_current_user)):
     """
     Receive raw text → LLM splits into entries → identifies fragments
     → generates metadata → stores everything.
     """
-    stored = run_ingestion(req.user_id, req.text, req.source_type)
+    stored = run_ingestion(current_user["id"], req.text, req.source_type)
     return {"stored": stored}
 
 
-@app.get("/surface/{user_id}")
-def surface(user_id: int, limit: int = 2):
-    """
-    Get today's fragments for a user.
-    Returns fragment text, entry context, and metadata.
-    """
-    fragments = get_due_fragments(user_id, limit=limit)
+@app.get("/surface")
+def surface(limit: int = 2, current_user=Depends(get_current_user)):
+    """Get today's fragments for the authenticated user."""
+    fragments = get_due_fragments(current_user["id"], limit=limit)
 
     if not fragments:
         return {"fragments": [], "message": "nothing today."}
@@ -89,7 +97,7 @@ def surface(user_id: int, limit: int = 2):
 
 
 @app.post("/action")
-def action(req: ActionRequest):
+def action(req: ActionRequest, current_user=Depends(get_current_user)):
     """
     Record user's response to a surfaced fragment.
     Logs interaction for algorithm research, then updates scheduling.
@@ -98,8 +106,11 @@ def action(req: ActionRequest):
     if req.action not in valid_actions:
         raise HTTPException(400, f"action must be one of {valid_actions}")
 
+    if not fragment_belongs_to_user(req.fragment_id, current_user["id"]):
+        raise HTTPException(403, "not your fragment")
+
     log_interaction(
-        user_id=req.user_id,
+        user_id=current_user["id"],
         fragment_id=req.fragment_id,
         action=req.action,
         time_spent_ms=req.time_spent_ms,
@@ -109,19 +120,21 @@ def action(req: ActionRequest):
     messages = {
         "keep": "held close.",
         "not_now": "it'll come back.",
-        "let_go": "archived \u2014 you can find it again if you want.",
+        "let_go": "archived — you can find it again if you want.",
     }
     return {"message": messages[req.action]}
 
 
 @app.post("/reflect")
-def reflect(req: ReflectionRequest):
+def reflect(req: ReflectionRequest, current_user=Depends(get_current_user)):
     """Add a reflection to an entry."""
     entry = get_entry(req.entry_id)
     if not entry:
         raise HTTPException(404, "entry not found")
+    if entry["user_id"] != current_user["id"]:
+        raise HTTPException(403, "not your entry")
 
-    save_reflection(req.user_id, req.entry_id, req.text)
+    save_reflection(current_user["id"], req.entry_id, req.text)
     return {"message": "thought added."}
 
 

@@ -1,7 +1,10 @@
 import sqlite3
 import random
+import secrets
+import hashlib
 from datetime import datetime, date
 from pathlib import Path
+from src.config import API_TOKEN_SECRET
 
 DB_PATH = Path(__file__).parent.parent / "flashback.db"
 
@@ -20,6 +23,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 telegram_id     INTEGER UNIQUE,
+                api_token_hash  TEXT UNIQUE,
                 created_at      TEXT DEFAULT (datetime('now'))
             );
 
@@ -78,11 +82,16 @@ def init_db():
             );
         """)
 
+        # Migration: add api_token_hash to databases that predate this column
+        existing_cols = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "api_token_hash" not in existing_cols:
+            conn.execute("ALTER TABLE users ADD COLUMN api_token_hash TEXT UNIQUE")
+
 
 # --- Users ---
 
 def get_or_create_user(telegram_id):
-    """Returns user row. Creates if first time."""
+    """Returns user row. Creates if first time. Used by the bot (no token)."""
     with get_connection() as conn:
         user = conn.execute(
             "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
@@ -95,6 +104,57 @@ def get_or_create_user(telegram_id):
         return conn.execute(
             "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
         ).fetchone()
+
+
+def _generate_token():
+    return "flbk_" + secrets.token_hex(32)
+
+
+def _hash_token(raw_token):
+    return hashlib.sha256((API_TOKEN_SECRET + raw_token).encode()).hexdigest()
+
+
+def register_user(telegram_id):
+    """Issues a fresh token. Returns (user_row, raw_token). Used by /register API."""
+    raw_token = _generate_token()
+    token_hash = _hash_token(raw_token)
+    with get_connection() as conn:
+        user = conn.execute(
+            "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
+        ).fetchone()
+        if user:
+            conn.execute(
+                "UPDATE users SET api_token_hash = ? WHERE id = ?",
+                (token_hash, user["id"])
+            )
+        else:
+            conn.execute(
+                "INSERT INTO users (telegram_id, api_token_hash) VALUES (?, ?)",
+                (telegram_id, token_hash)
+            )
+        user = conn.execute(
+            "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
+        ).fetchone()
+    return user, raw_token
+
+
+def get_user_by_token(raw_token):
+    """Returns user row if token is valid, None otherwise."""
+    token_hash = _hash_token(raw_token)
+    with get_connection() as conn:
+        return conn.execute(
+            "SELECT * FROM users WHERE api_token_hash = ?", (token_hash,)
+        ).fetchone()
+
+
+def fragment_belongs_to_user(fragment_id, user_id):
+    """Returns True if the fragment belongs to the given user."""
+    with get_connection() as conn:
+        return conn.execute("""
+            SELECT f.id FROM fragments f
+            JOIN entries e ON f.entry_id = e.id
+            WHERE f.id = ? AND e.user_id = ?
+        """, (fragment_id, user_id)).fetchone() is not None
 
 
 # --- Write ---
