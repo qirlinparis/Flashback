@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import random
 import secrets
@@ -6,7 +7,7 @@ from datetime import datetime, date
 from pathlib import Path
 from src.config import API_TOKEN_SECRET
 
-DB_PATH = Path(__file__).parent.parent / "flashback.db"
+DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "flashback.db")))
 
 
 def get_connection():
