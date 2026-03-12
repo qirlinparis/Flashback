@@ -127,6 +127,55 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 8. **Full system review** (next session) — read every file, trace full lifecycle, verify API contract before iOS
 9. Native iOS app
 
+## Security Protocol
+
+### When to suggest running the security test suite
+
+After any session that modifies files in `src/`, proactively suggest:
+
+```bash
+python tests/security_test.py
+```
+
+Do not wait to be asked. Say: *"Security test suite should be run before this goes to production — want me to walk through the results?"*
+
+Skip the suggestion only for: docs changes, config comments, CLAUDE.md edits, prototype files.
+
+### The 6-step loop (run when tests are executed)
+
+**1. Run the tests**
+```bash
+python tests/security_test.py
+```
+
+**2. For each FAIL: identify root cause and class**
+
+Map every failure to a problem class:
+- `AUTH_BYPASS` — endpoint reachable without valid token
+- `IDOR` — user can access or modify another user's data
+- `INJECTION` — user input reaches a query or command without sanitization
+- `INPUT_VALIDATION` — malformed input causes 500 instead of 422
+- `TOKEN_LIFECYCLE` — old tokens not invalidated, tokens leak, tokens stored in plaintext
+- `LOGIC_ERROR` — business logic produces wrong outcome (wrong scheduling, wrong ownership check)
+
+**3. Log it in `docs/SECURITY_LOG.md`**
+
+Add an entry with: date, what failed, root cause, class, how it was fixed.
+
+**4. Improve the test suite itself**
+
+Ask: does this failure reveal an untested scenario? If yes, add a test case before closing the loop. The test suite should grow every time a real finding is made.
+
+**5. Write a prevention rule**
+
+One sentence: *"Never [do X] because [it causes class Y]."* Add it to the Known Vulnerability Classes section of `docs/SECURITY_LOG.md`.
+
+**6. Update the security-auditor agent**
+
+Add the new prevention rule to `~/.claude/agents/security-auditor.md` under a "Never Do" section. Use the agent-installer agent to do this. The goal: the security auditor will actively check for this class of problem in future code reviews without being asked.
+
+---
+
 ## Agent Maintenance Protocol
 
 Flashback has 16 specialized Claude Code agents in ~/.claude/agents/ on the local machine (not the server). Each agent has a description field that determines when it gets used, and a Flashback Project Context block with project-specific knowledge.
