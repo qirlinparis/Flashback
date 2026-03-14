@@ -40,7 +40,8 @@ def init_db():
                 conceptual_tags TEXT,
                 emotional_register TEXT,
                 tension         TEXT,
-                formal_skeleton TEXT
+                formal_skeleton TEXT,
+                used_fallback   INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS fragments (
@@ -87,6 +88,11 @@ def init_db():
         existing_cols = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
         if "api_token_hash" not in existing_cols:
             conn.execute("ALTER TABLE users ADD COLUMN api_token_hash TEXT UNIQUE")
+
+        # Migration: add used_fallback to databases that predate this column
+        entry_cols = [row[1] for row in conn.execute("PRAGMA table_info(entries)").fetchall()]
+        if "used_fallback" not in entry_cols:
+            conn.execute("ALTER TABLE entries ADD COLUMN used_fallback INTEGER DEFAULT 0")
 
 
 # --- Users ---
@@ -162,16 +168,17 @@ def fragment_belongs_to_user(fragment_id, user_id):
 
 def save_entry(user_id, text, source_type="telegram", original_date=None,
                mode="personal", summary=None, conceptual_tags=None,
-               emotional_register=None, tension=None, formal_skeleton=None):
+               emotional_register=None, tension=None, formal_skeleton=None,
+               used_fallback=0):
     with get_connection() as conn:
         cursor = conn.execute("""
             INSERT INTO entries (user_id, text, source_type, original_date, mode,
                                  summary, conceptual_tags, emotional_register,
-                                 tension, formal_skeleton)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 tension, formal_skeleton, used_fallback)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (user_id, text, source_type, original_date, mode,
               summary, conceptual_tags, emotional_register,
-              tension, formal_skeleton))
+              tension, formal_skeleton, used_fallback))
         return cursor.lastrowid
 
 

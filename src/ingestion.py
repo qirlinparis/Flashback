@@ -100,11 +100,13 @@ def ingest(user_id, text, source_type="telegram"):
     2. Store entries and fragments in database
     3. Returns list of (entry_id, [fragment_ids]) tuples
     """
+    used_fallback = 0
     try:
         result = call_llm(text)
     except Exception as e:
         print(f"LLM failed ({e}), using fallback")
         result = fallback_entry(text)
+        used_fallback = 1
 
     stored = []
 
@@ -124,6 +126,7 @@ def ingest(user_id, text, source_type="telegram"):
             emotional_register=entry_data.get("emotional_register"),
             tension=json.dumps(tension) if tension else None,
             formal_skeleton=entry_data.get("formal_skeleton"),
+            used_fallback=used_fallback,
         )
 
         fragment_ids = []

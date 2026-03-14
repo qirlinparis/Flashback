@@ -89,6 +89,11 @@ def surface(limit: int = 2, current_user=Depends(get_current_user)):
             "original_date": entry["original_date"] if entry else None,
             "mode": entry["mode"] if entry else None,
             "review_count": f["review_count"],
+            "surface_reason": {
+                "interval_days": f["interval_days"],
+                "review_count": f["review_count"],
+                "next_review_date": f["next_review_date"],
+            },
             "reflections": [{"text": r["text"], "created_at": r["created_at"]}
                             for r in reflections],
         })

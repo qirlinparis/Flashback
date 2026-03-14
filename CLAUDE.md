@@ -176,6 +176,48 @@ Add the new prevention rule to `~/.claude/agents/security-auditor.md` under a "N
 
 ---
 
+## Prompt Quality Protocol
+
+### When to trigger
+
+When any ingestion output looks wrong: wrong mode classification, missed fragment
+boundary, hallucinated date, nonsense metadata, or the fallback fired instead of
+the LLM producing a result.
+
+### Failure classes
+
+| Class | Meaning |
+|---|---|
+| `BAD_SPLIT` | One coherent thought split into multiple entries, or multiple topics merged into one |
+| `WRONG_MODE` | personal/knowledge classification is clearly wrong |
+| `HALLUCINATED_DATE` | original_date field contains a date not in the source text |
+| `MISSING_FRAGMENT` | Entry has only a trivial fragment that doesn't mark a real phase transition |
+| `FALLBACK_FIRED` | LLM call failed (network, quota, invalid JSON) — fallback used instead |
+| `BAD_METADATA` | Tags, emotional_register, or tension are absent, generic, or wrong |
+
+### The 5-step loop
+
+**1. Identify the class** from the table above.
+
+**2. Log it in `docs/PROMPT_LOG.md`**
+
+Add an entry with: date, what was ingested, what went wrong, which class, what the prompt change was.
+
+**3. Fix the system prompt** in `src/ingestion.py`
+
+Targeted change only. Do not rewrite the whole prompt — isolate the clause that
+failed and fix that clause. Smaller prompts with sharper rules outperform longer
+vague ones.
+
+**4. Re-ingest the failing example** to confirm the fix before committing.
+
+**5. Update the prompt-engineer agent**
+
+Add a "Never Do" rule to `~/.claude/agents/prompt-engineer.md` so the pattern
+doesn't recur in future prompt edits. Use the agent-installer agent to do this.
+
+---
+
 ## Agent Maintenance Protocol
 
 Flashback has 16 specialized Claude Code agents in ~/.claude/agents/ on the local machine (not the server). Each agent has a description field that determines when it gets used, and a Flashback Project Context block with project-specific knowledge.
