@@ -123,7 +123,100 @@ Target: composable toward 1000+ paying users. iPhone only for now.
 4. ~~Ingestion pipeline (text → LLM → entries/fragments/metadata)~~ ✓
 5. ~~Scriptable widget (temporary iOS surface)~~ ✓
 6. ~~Production deployment~~ ✓ (live at qirlinparis.codes)
-7. Auth (API tokens)
+7. ~~Auth (API tokens)~~ ✓
+8. **Full system review** (next session) — read every file, trace full lifecycle, verify API contract before iOS
+9. Native iOS app
+
+## Security Protocol
+
+### When to suggest running the security test suite
+
+After any session that modifies files in `src/`, proactively suggest:
+
+```bash
+python tests/security_test.py
+```
+
+Do not wait to be asked. Say: *"Security test suite should be run before this goes to production — want me to walk through the results?"*
+
+Skip the suggestion only for: docs changes, config comments, CLAUDE.md edits, prototype files.
+
+### The 6-step loop (run when tests are executed)
+
+**1. Run the tests**
+```bash
+python tests/security_test.py
+```
+
+**2. For each FAIL: identify root cause and class**
+
+Map every failure to a problem class:
+- `AUTH_BYPASS` — endpoint reachable without valid token
+- `IDOR` — user can access or modify another user's data
+- `INJECTION` — user input reaches a query or command without sanitization
+- `INPUT_VALIDATION` — malformed input causes 500 instead of 422
+- `TOKEN_LIFECYCLE` — old tokens not invalidated, tokens leak, tokens stored in plaintext
+- `LOGIC_ERROR` — business logic produces wrong outcome (wrong scheduling, wrong ownership check)
+
+**3. Log it in `docs/SECURITY_LOG.md`**
+
+Add an entry with: date, what failed, root cause, class, how it was fixed.
+
+**4. Improve the test suite itself**
+
+Ask: does this failure reveal an untested scenario? If yes, add a test case before closing the loop. The test suite should grow every time a real finding is made.
+
+**5. Write a prevention rule**
+
+One sentence: *"Never [do X] because [it causes class Y]."* Add it to the Known Vulnerability Classes section of `docs/SECURITY_LOG.md`.
+
+**6. Update the security-auditor agent**
+
+Add the new prevention rule to `~/.claude/agents/security-auditor.md` under a "Never Do" section. Use the agent-installer agent to do this. The goal: the security auditor will actively check for this class of problem in future code reviews without being asked.
+
+---
+
+## Prompt Quality Protocol
+
+### When to trigger
+
+When any ingestion output looks wrong: wrong mode classification, missed fragment
+boundary, hallucinated date, nonsense metadata, or the fallback fired instead of
+the LLM producing a result.
+
+### Failure classes
+
+| Class | Meaning |
+|---|---|
+| `BAD_SPLIT` | One coherent thought split into multiple entries, or multiple topics merged into one |
+| `WRONG_MODE` | personal/knowledge classification is clearly wrong |
+| `HALLUCINATED_DATE` | original_date field contains a date not in the source text |
+| `MISSING_FRAGMENT` | Entry has only a trivial fragment that doesn't mark a real phase transition |
+| `FALLBACK_FIRED` | LLM call failed (network, quota, invalid JSON) — fallback used instead |
+| `BAD_METADATA` | Tags, emotional_register, or tension are absent, generic, or wrong |
+
+### The 5-step loop
+
+**1. Identify the class** from the table above.
+
+**2. Log it in `docs/PROMPT_LOG.md`**
+
+Add an entry with: date, what was ingested, what went wrong, which class, what the prompt change was.
+
+**3. Fix the system prompt** in `src/ingestion.py`
+
+Targeted change only. Do not rewrite the whole prompt — isolate the clause that
+failed and fix that clause. Smaller prompts with sharper rules outperform longer
+vague ones.
+
+**4. Re-ingest the failing example** to confirm the fix before committing.
+
+**5. Update the prompt-engineer agent**
+
+Add a "Never Do" rule to `~/.claude/agents/prompt-engineer.md` so the pattern
+doesn't recur in future prompt edits. Use the agent-installer agent to do this.
+
+---
 
 ## Agent Maintenance Protocol
 
@@ -134,7 +227,7 @@ Flashback has 16 specialized Claude Code agents in ~/.claude/agents/ on the loca
 - Schema change -> update sql-pro.md
 - LLM pipeline built -> update llm-architect.md and prompt-engineer.md
 - New client (iOS) -> update swift-expert.md and api-designer.md
-- Auth built -> update security-auditor.md
+- Auth built -> update security-auditor.md ← **needs update** (auth built March 12)
 
 **How:** Use the agent-installer agent — it knows how to update stale descriptions.
 
