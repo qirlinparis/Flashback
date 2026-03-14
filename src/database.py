@@ -200,7 +200,7 @@ def init_review_state(fragment_id):
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO review_states (fragment_id, next_review_date)
-            VALUES (?, date('now', '+1 day'))
+            VALUES (?, date('now'))
         """, (fragment_id,))
 
 
